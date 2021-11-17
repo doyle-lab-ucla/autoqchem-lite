@@ -6,7 +6,7 @@ import os
 import pickle
 from datetime import date, datetime
 
-from gaussian_input_generator import gaussian_input_generator
+from job_generator import job_generator
 
 
 class autobot(object):
@@ -30,14 +30,14 @@ class autobot(object):
 
         mol_workdir = os.path.join(self.workdir, molecule.inchikey)
 
-        gaussian_generator = gaussian_input_generator(molecule,
-                                                      workflow_type,
-                                                      mol_workdir,
-                                                      theory,
-                                                      light_basis_set,
-                                                      heavy_basis_set,
-                                                      generic_basis_set,
-                                                      max_light_atomic_number)
+        generator = job_generator(molecule,
+                                  workflow_type,
+                                  mol_workdir,
+                                  theory,
+                                  light_basis_set,
+                                  heavy_basis_set,
+                                  generic_basis_set,
+                                  max_light_atomic_number)
 
         gaussian_config = {'theory': theory,
                            'light_basis_set': light_basis_set,
@@ -47,7 +47,7 @@ class autobot(object):
 
         # TODO: possible db check
 
-        gaussian_generator.create_gaussian_files()
+        generator.create_gaussian_files()
 
 
 

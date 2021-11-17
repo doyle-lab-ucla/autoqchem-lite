@@ -10,7 +10,7 @@ import rdkit_utils
 logger = logging.getLogger(__name__)
 
 
-class gaussian_input_generator(object):
+class job_generator(object):
     """Generator of gaussian input files class"""
 
     def __init__(self, molecule, workflow_type, directory, theory, light_basis_set,
@@ -62,20 +62,20 @@ class gaussian_input_generator(object):
             raise ValueError(f"Not supported gaussian job type {workflow_type}. "
                              f"Allowed types are: equilibrium, transition_state.")
 
+        # resource configuration
+        with open('config.yml', 'r') as config_file:
+            config = yaml.load(config_file, Loader=yaml.FullLoader)
+        self.n_processors = max(1, min(config['slurm']['max_processors'],
+                                  self.molecule.mol.GetNumAtoms() // config['slurm']['atoms_per_processor']))
+        self.ram = self.n_processors * config['slurm']['ram_per_processor']
+        self.resource_block = f"%nprocshared={self.n_processors}\n%Mem={self.ram}GB\n"
+
     def create_gaussian_files(self) -> None:
         """Create the actual gaussian files for each conformer of the molecule."""
 
         # prepare directory for gaussian files
         helper_functions.cleanup_directory_files(self.directory, types=["gjf"])
         os.makedirs(self.directory, exist_ok=True)
-
-        # resources configuration
-        with open('config.yml', 'r') as config_file:
-            config = yaml.load(config_file, Loader=yaml.FullLoader)
-        n_processors = max(1, min(config['slurm']['max_processors'],
-                                  self.molecule.mol.GetNumAtoms() // config['slurm']['atoms_per_processor']))
-        ram = n_processors * config['slurm']['ram_per_processor']
-        resource_block = f"%nprocshared={n_processors}\n%Mem={ram}GB\n"
 
         logger.info(f"Generating Gaussian input files for {self.molecule.mol.GetNumConformers()} conformations.")
 
@@ -90,10 +90,55 @@ class gaussian_input_generator(object):
             # create the gaussian input file
             self._generate_file(self.tasks,
                                 conf_name,
-                                resource_block,
+                                self.resource_block,
                                 coords_block,
                                 self.molecule.charge,
                                 self.molecule.spin)
+
+            self._create_h2_jobs(conf_name=conf_name)
+
+    def _create_h2_jobs(self, conf_name):
+        file_name = str(conf_name + '.sh')
+        file_path = self.directory + '/' + file_name
+
+        # start writing scripts
+        to_write = '### ' + file_name + ' START ###\n'
+        to_write += '#!/bin/bash\n' \
+                    '#$ -cwd\n' \
+                    '#$ -o logs/$JOB_ID.$JOB_NAME.joblog\n' \
+                    '#$ -j y\n' \
+                    '#$ -M $USER@mail\n' \
+                    '#$ -m bea\n'
+        to_write += '#$ -l h_data=' + str(self.ram+2) + 'G,' + 'h_rt=23:59:59,arch=intel-[Eg][5o][l-]*\n' #TODO: wall time
+        to_write += '# #$ -pe shared ' + str(self.n_processors) +'\n' #TODO: fix memory logic
+        to_write += '# #$ -l h_vmem=' + str(self.n_processors*(self.ram+2)) + 'G' + '\n\n'
+        to_write += '# echo job info on joblog:' \
+                    'echo "Job $JOB_ID started on:   " `hostname -s`\n' \
+                    'echo "Job $JOB_ID started on:   " `date `\n' \
+                    'echo " "\n\n' \
+                    '# set job environment and GAUSS_SCRDIR variable\n' \
+                    '. /u/local/Modules/default/init/modules.sh\n' \
+                    'module load gaussian/g16_avx\n' \
+                    'export GAUSS_SCRDIR=$TMPDIR\n' \
+                    '# echo in joblog\n' \
+                    'module li\n' \
+                    'echo "GAUSS_SCRDIR=$GAUSS_SCRDIR"\n' \
+                    'echo " "\n\n' \
+                    'echo "/usr/bin/time -v $g16root/16_avx/g16 < ${JOB_NAME%.*}.gjf > out/${JOB_NAME%.*}.out"\n' \
+                    '/usr/bin/time -v $g16root/16_avx/g16 < ${JOB_NAME%.*}.gjf > out/${JOB_NAME%.*}.out\n\n' \
+                    '# echo job info on joblog\n' \
+                    'echo "Job $JOB_ID ended on:   " `hostname -s`\n' \
+                    'echo "Job $JOB_ID ended on:   " `date `\n' \
+                    'echo " "\n' \
+                    'echo "Input file START:"\n' \
+                    'cat ${JOB_NAME%.*}.gjf\n' \
+                    'echo "END of input file"\n' \
+                    'echo " "\n' \
+                    '### test.sh STOP ###\n\n'
+
+        with open(file_path, 'w') as f:
+            f.write(to_write)
+
 
     def _generate_file(self, tasks, name, resource_block, coords_block, charge, multiplicity) -> None:
         """
