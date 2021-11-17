@@ -4,8 +4,3 @@ slurm:
     max_processors: 20
     ram_per_processor: 2
 
-mongoDB:
-    host: "autoqchem.org"
-    port: 27017
-    user: "acqWriter"
-    password: "dftworks"
