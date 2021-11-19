@@ -9,7 +9,7 @@ from datetime import date, datetime
 from job_generator import JobGenerator
 
 
-class autobot(object):
+class AutoBot(object):
 
     def __init__(self):
         
@@ -28,16 +28,14 @@ class autobot(object):
                              max_light_atomic_number=36,
                              wall_time='23:59:00') -> None:
 
-        mol_workdir = os.path.join(self.workdir, molecule.inchikey)
+        if not molecule.name:
+            mol_workdir = os.path.join(self.workdir, molecule.inchikey)
+        else:
+            mol_workdir = os.path.join(self.workdir, molecule.name)
 
-        generator = JobGenerator(molecule,
-                                  workflow_type,
-                                  mol_workdir,
-                                  theory,
-                                  light_basis_set,
-                                  heavy_basis_set,
-                                  generic_basis_set,
-                                  max_light_atomic_number)
+        generator = JobGenerator(molecule, workflow_type, mol_workdir, theory,
+                                 light_basis_set, heavy_basis_set, generic_basis_set,
+                                 max_light_atomic_number, wall_time)
 
         gaussian_config = {'theory': theory,
                            'light_basis_set': light_basis_set,

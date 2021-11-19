@@ -1,13 +1,21 @@
 # functions specific to computer clusters
+# reason for this is to separate out functions that is cluster specific
+# aka functions that need to be modified to be used on other computer clusters
 
 
-# generate submission scripts for hoffman2 cluster at UCLA
+def generate_h2_job(job_generator, conf_name):
+    """
+    function to generate submission scripts for gaussian jobs on hoffman2 computer cluster at UCLA
 
-def generate_h2_job(self, conf_name):
+    :param job_generator: JobGenerator object
+    :type job_generator: job_generator.JobGenerator
+    :param conf_name: name of the conformer, inchikey + index
+    :type conf_name: str
+    """
     file_name = str(conf_name + '.sh')
-    file_path = self.directory + '/' + file_name
+    file_path = job_generator.directory + '/' + file_name
 
-    # start writing scripts
+    # write submission scripts
     to_write = '### ' + file_name + ' START ###\n'
     to_write += '#!/bin/bash\n' \
                 '#$ -cwd\n' \
@@ -15,8 +23,8 @@ def generate_h2_job(self, conf_name):
                 '#$ -j y\n' \
                 '#$ -M $USER@mail\n' \
                 '#$ -m bea\n'
-    to_write += '#$ -l h_data=' + str(self.ram + 4) + 'G,' + 'h_rt=23:59:59,arch=intel-[Eg][5o][l-]*\n'  # TODO: wall time
-    to_write += '#$ -pe shared ' + str(self.n_processors) + '\n\n'
+    to_write += '#$ -l h_data=' + str(job_generator.ram + 4) + 'G,' + 'h_rt=' + str(job_generator.wall_time) + ',arch=intel-[Eg][5o][l-]*\n'
+    to_write += '#$ -pe shared ' + str(job_generator.n_processors) + '\n\n'
     to_write += '# echo job info on joblog:\n' \
                 'echo "Job $JOB_ID started on:   " `hostname -s`\n' \
                 'echo "Job $JOB_ID started on:   " `date `\n' \

@@ -4,12 +4,10 @@ import os
 
 try:
     from openbabel import pybel  # openbabel 3.0.0
-
     GetSymbol = pybel.ob.GetSymbol
     GetVdwRad = pybel.ob.GetVdwRad
 except ImportError:
     import pybel  # openbabel 2.4
-
     table = pybel.ob.OBElementTable()
     GetSymbol = table.GetSymbol
     GetVdwRad = table.GetVdwRad
@@ -26,32 +24,39 @@ import rdkit_utils
 logger = logging.getLogger(__name__)
 
 
-class molecule(object):
+class Molecule(object):
     """Wrapper class for molecule"""
 
-    def __init__(self, smiles, num_conf, engine='rdkit', rdkit_ff='MMFF94', ob_gen3D_option='best',
+    def __init__(self, smiles, name=None, num_conf=3, engine='rdkit', rdkit_ff='MMFF94', ob_gen3d_option='best',
                  n_threads=os.cpu_count() - 1) -> None:
-        '''Initialize the molecule with a conformational ensemble'''
+        """
+        Initialize the molecule with a conformational ensemble
+
+        """
+
+        self.name = name
 
         # run conformer generation
         if engine == 'rdkit':
             self.elements, \
             self.conformer_coordinates, \
             self.connectivity_matrix, \
-            self.charges = rdkit_utils.generate_conformations_from_rdkit(smiles=smiles, num_conf=num_conf,
-                                                             rdkit_ff=rdkit_ff, n_threads=n_threads)
+            self.charges = rdkit_utils.generate_conformations_from_rdkit(smiles=smiles,
+                                                                         num_conf=num_conf,
+                                                                         rdkit_ff=rdkit_ff,
+                                                                         n_threads=n_threads)
         elif engine == 'openbabel':
             self.elements, \
             self.conformer_coordinates, \
             self.connectivity_matrix, \
-            self.charges = ob_utils.generate_conformations_from_openbabel(smiles=smiles, num_conf=num_conf,
-                                                                 ob_gen3D_option=ob_gen3D_option)
+            self.charges = ob_utils.generate_conformations_from_openbabel(smiles=smiles,
+                                                                          num_conf=num_conf,
+                                                                          ob_gen3d_option=ob_gen3d_option)
         else:
             logger.error('Engine error for molecule')
 
         # make an internal rdkit mol from the conformational ensemble
-        self.mol = rdkit_utils.get_rdkit_mol(self.elements, self.conformer_coordinates,
-                                 self.connectivity_matrix, self.charges)
+        self.mol = rdkit_utils.get_rdkit_mol(self.elements, self.conformer_coordinates, self.connectivity_matrix, self.charges)
 
         # fetch identification variables
         self.can = smiles
@@ -67,7 +72,7 @@ class molecule(object):
         self.spin = Descriptors.NumRadicalElectrons(self.mol) + 1
 
 
-class molecule_old(object):
+class OldMolecule(object):
     """Wrapper class for openbabel.OBMol class"""
 
     def __init__(self,

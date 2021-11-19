@@ -15,11 +15,11 @@ class JobGenerator(object):
     """Generator of gaussian input files class"""
 
     def __init__(self, molecule, workflow_type, directory, theory, light_basis_set,
-                 heavy_basis_set, generic_basis_set, max_light_atomic_number):
+                 heavy_basis_set, generic_basis_set, max_light_atomic_number, wall_time):
         """Initialize input generator for a given molecule.
 
-        :param molecule: molecule object
-        :type molecule: molecule
+        :param molecule: Molecule object
+        :type molecule: molecule.Molecule
         :param workflow_type: Gaussian workflow type, allowed types are: 'equilibrium' or 'transition_state'
         :type workflow_type: str
         :param directory: local directory to store input files
@@ -70,6 +70,7 @@ class JobGenerator(object):
                                   self.molecule.mol.GetNumAtoms() // config['slurm']['atoms_per_processor']))
         self.ram = self.n_processors * config['slurm']['ram_per_processor']
         self.resource_block = f"%nprocshared={self.n_processors}\n%Mem={self.ram}GB\n"
+        self.wall_time = wall_time
 
     def create_gaussian_files(self) -> None:
         """Create the actual gaussian files for each conformer of the molecule."""
@@ -81,8 +82,12 @@ class JobGenerator(object):
         logger.info(f"Generating Gaussian input files for {self.molecule.mol.GetNumConformers()} conformations.")
 
         for conf_id, conf_coord in enumerate(self.molecule.conformer_coordinates):
-            # set conformer
-            conf_name = f"{self.molecule.inchikey}_conf_{conf_id}"
+
+            # conformer name
+            if not self.molecule.name:
+                conf_name = f"{self.molecule.inchikey}_conf_{conf_id}"
+            else:
+                conf_name = f"{self.molecule.name}_conf_{conf_id}"
 
             # coordinates block
             geom_np_array = np.concatenate((np.array([self.molecule.elements]).T, conf_coord), axis=1)
@@ -96,7 +101,7 @@ class JobGenerator(object):
                                         self.molecule.charge,
                                         self.molecule.spin)
 
-            cluster_functions.generate_h2_job(conf_name=conf_name)
+            cluster_functions.generate_h2_job(self, conf_name=conf_name)
 
     def _generate_gaussian_job(self, tasks, name, resource_block, coords_block, charge, multiplicity) -> None:
         """
