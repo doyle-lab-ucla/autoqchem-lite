@@ -1,4 +1,4 @@
-from gaussian_log_extractor import gaussian_log_extractor
+from gaussian_log_extractor import GaussianLogExtractor
 import helper_classes
 from molecule import pybel, GetSymbol
 import numpy as np

@@ -6,11 +6,12 @@ import numpy as np
 
 import helper_functions
 import rdkit_utils
+import cluster_functions
 
 logger = logging.getLogger(__name__)
 
 
-class job_generator(object):
+class JobGenerator(object):
     """Generator of gaussian input files class"""
 
     def __init__(self, molecule, workflow_type, directory, theory, light_basis_set,
@@ -88,59 +89,16 @@ class job_generator(object):
             coords_block = "\n".join(map(" ".join, geom_np_array))
 
             # create the gaussian input file
-            self._generate_file(self.tasks,
-                                conf_name,
-                                self.resource_block,
-                                coords_block,
-                                self.molecule.charge,
-                                self.molecule.spin)
+            self._generate_gaussian_job(self.tasks,
+                                        conf_name,
+                                        self.resource_block,
+                                        coords_block,
+                                        self.molecule.charge,
+                                        self.molecule.spin)
 
-            self._create_h2_jobs(conf_name=conf_name)
+            cluster_functions.generate_h2_job(conf_name=conf_name)
 
-    def _create_h2_jobs(self, conf_name):
-        file_name = str(conf_name + '.sh')
-        file_path = self.directory + '/' + file_name
-
-        # start writing scripts
-        to_write = '### ' + file_name + ' START ###\n'
-        to_write += '#!/bin/bash\n' \
-                    '#$ -cwd\n' \
-                    '#$ -o logs/$JOB_ID.$JOB_NAME.joblog\n' \
-                    '#$ -j y\n' \
-                    '#$ -M $USER@mail\n' \
-                    '#$ -m bea\n'
-        to_write += '#$ -l h_data=' + str(self.ram+2) + 'G,' + 'h_rt=23:59:59,arch=intel-[Eg][5o][l-]*\n' #TODO: wall time
-        to_write += '# #$ -pe shared ' + str(self.n_processors) +'\n' #TODO: fix memory logic
-        to_write += '# #$ -l h_vmem=' + str(self.n_processors*(self.ram+2)) + 'G' + '\n\n'
-        to_write += '# echo job info on joblog:' \
-                    'echo "Job $JOB_ID started on:   " `hostname -s`\n' \
-                    'echo "Job $JOB_ID started on:   " `date `\n' \
-                    'echo " "\n\n' \
-                    '# set job environment and GAUSS_SCRDIR variable\n' \
-                    '. /u/local/Modules/default/init/modules.sh\n' \
-                    'module load gaussian/g16_avx\n' \
-                    'export GAUSS_SCRDIR=$TMPDIR\n' \
-                    '# echo in joblog\n' \
-                    'module li\n' \
-                    'echo "GAUSS_SCRDIR=$GAUSS_SCRDIR"\n' \
-                    'echo " "\n\n' \
-                    'echo "/usr/bin/time -v $g16root/16_avx/g16 < ${JOB_NAME%.*}.gjf > out/${JOB_NAME%.*}.out"\n' \
-                    '/usr/bin/time -v $g16root/16_avx/g16 < ${JOB_NAME%.*}.gjf > out/${JOB_NAME%.*}.out\n\n' \
-                    '# echo job info on joblog\n' \
-                    'echo "Job $JOB_ID ended on:   " `hostname -s`\n' \
-                    'echo "Job $JOB_ID ended on:   " `date `\n' \
-                    'echo " "\n' \
-                    'echo "Input file START:"\n' \
-                    'cat ${JOB_NAME%.*}.gjf\n' \
-                    'echo "END of input file"\n' \
-                    'echo " "\n' \
-                    '### test.sh STOP ###\n\n'
-
-        with open(file_path, 'w') as f:
-            f.write(to_write)
-
-
-    def _generate_file(self, tasks, name, resource_block, coords_block, charge, multiplicity) -> None:
+    def _generate_gaussian_job(self, tasks, name, resource_block, coords_block, charge, multiplicity) -> None:
         """
 
         :param tasks: tuple of Gaussian tasks

@@ -6,7 +6,7 @@ import os
 import pickle
 from datetime import date, datetime
 
-from job_generator import job_generator
+from job_generator import JobGenerator
 
 
 class autobot(object):
@@ -30,7 +30,7 @@ class autobot(object):
 
         mol_workdir = os.path.join(self.workdir, molecule.inchikey)
 
-        generator = job_generator(molecule,
+        generator = JobGenerator(molecule,
                                   workflow_type,
                                   mol_workdir,
                                   theory,

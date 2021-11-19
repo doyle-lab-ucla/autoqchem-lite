@@ -5,7 +5,7 @@ import re
 from rdkit import Chem, Geometry
 from rdkit.Chem import AllChem
 
-from gaussian_log_extractor import gaussian_log_extractor
+from gaussian_log_extractor import GaussianLogExtractor
 import helper_classes
 
 try:

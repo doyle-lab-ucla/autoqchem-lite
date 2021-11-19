@@ -28,7 +28,7 @@ class OptimizationIncompleteException(Exception):
     pass
 
 
-class gaussian_log_extractor(object):
+class GaussianLogExtractor(object):
     """"""
 
     def __init__(self, log_file_path):
