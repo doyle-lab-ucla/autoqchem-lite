@@ -85,8 +85,10 @@ class JobGenerator(object):
 
             # conformer name
             if not self.molecule.name:
+                mol_name = str(self.molecule.inchikey)
                 conf_name = f"{self.molecule.inchikey}_conf_{conf_id}"
             else:
+                mol_name = str(self.molecule.name)
                 conf_name = f"{self.molecule.name}_conf_{conf_id}"
 
             # coordinates block
@@ -95,19 +97,22 @@ class JobGenerator(object):
 
             # create the gaussian input file
             self._generate_gaussian_job(self.tasks,
+                                        mol_name,
                                         conf_name,
                                         self.resource_block,
                                         coords_block,
                                         self.molecule.charge,
                                         self.molecule.spin)
 
-            cluster_functions.generate_h2_job(self, conf_name=conf_name)
+            cluster_functions.generate_h2_job(self, mol_name=mol_name, conf_name=conf_name)
+            cluster_functions.write_submission_script(self, mol_name, conf_name)
 
-    def _generate_gaussian_job(self, tasks, name, resource_block, coords_block, charge, multiplicity) -> None:
+    def _generate_gaussian_job(self, tasks, mol_name, conf_name, resource_block, coords_block, charge, multiplicity) -> None:
         """
 
         :param tasks: tuple of Gaussian tasks
-        :param name:  conformation name
+        :param mol_name: molecule name
+        :param conf_name: conformation name
         :param resource_block: resource block for the Gaussian input file
         :param coords_block: coordinates block for the Gaussian input file
         :param light_elements: list of light elements of the molecule
@@ -122,17 +127,17 @@ class JobGenerator(object):
         for i, task in enumerate(tasks):
             if i == 0:  # first task is special, coordinates follow
                 output += resource_block
-                output += f"%Chk={name}_{i}.chk\n"
+                output += f"%Chk={mol_name}/{conf_name}_{i}.chk\n"
                 output += f"# {task}\n\n"
-                output += f"{name}\n\n"
+                output += f"{conf_name}\n\n"
                 output += f"{charge} {multiplicity}\n"
                 output += f"{coords_block.strip()}\n"
                 output += f"\n"
             else:
                 output += "\n--Link1--\n"
                 output += resource_block
-                output += f"%Oldchk={name}_{i - 1}.chk\n"
-                output += f"%Chk={name}_{i}.chk\n"
+                output += f"%Oldchk={mol_name}/{conf_name}_{i - 1}.chk\n"
+                output += f"%Chk={mol_name}/{conf_name}_{i}.chk\n"
                 output += f"# {task}\n"
                 output += f"\n"
 
@@ -140,7 +145,7 @@ class JobGenerator(object):
 
         output += f"\n\n"
 
-        file_path = f"{self.directory}/{name}.gjf"
+        file_path = f"{self.directory}/{conf_name}.gjf"
         with open(file_path, "w") as file:
             file.write(output)
 

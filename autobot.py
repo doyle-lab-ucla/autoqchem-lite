@@ -6,17 +6,23 @@ import os
 import pickle
 from datetime import date, datetime
 
-from job_generator import JobGenerator
+from gaussian_job_generator import JobGenerator
 
 
 class AutoBot(object):
 
     def __init__(self):
-        
+
+        # TODO: name for workdir
         self.workdir = os.path.join(os.getcwd(), 'tests', datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))
-        self.cachedir = os.path.join(self.workdir, 'cache')
+        #self.cachedir = os.path.join(self.workdir, 'cache')
         os.makedirs(self.workdir, exist_ok=True)
-        os.makedirs(self.cachedir, exist_ok=True)
+        #os.makedirs(self.cachedir, exist_ok=True)
+
+        # create submission.sh
+        file_path = os.path.join(self.workdir, 'submit.sh')
+        with open(file_path, 'w') as f:
+            f.write('#!/bin/bash\n')
 
     def create_gaussian_jobs(self,
                              molecule,
