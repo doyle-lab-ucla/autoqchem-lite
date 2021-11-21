@@ -2,6 +2,7 @@
 #
 
 import pandas as pd
+import json
 import os
 import pickle
 from datetime import date, datetime
@@ -19,7 +20,7 @@ class AutoBot(object):
         os.makedirs(self.workdir, exist_ok=True)
         #os.makedirs(self.cachedir, exist_ok=True)
 
-        # create submission.sh
+        # create submission.sh with bash header
         file_path = os.path.join(self.workdir, 'submit.sh')
         with open(file_path, 'w') as f:
             f.write('#!/bin/bash\n')
@@ -43,24 +44,21 @@ class AutoBot(object):
                                  light_basis_set, heavy_basis_set, generic_basis_set,
                                  max_light_atomic_number, wall_time)
 
-        gaussian_config = {'theory': theory,
-                           'light_basis_set': light_basis_set,
-                           'heavy_basis_set': heavy_basis_set,
-                           'generic_basis_set': generic_basis_set,
-                           'max_light_atomic_number': max_light_atomic_number}
-
         # TODO: possible db check
 
         generator.create_gaussian_files()
 
+        # save a copy of gaussian configs for this molecule
+        gaussian_config = {'workflow_type': workflow_type,
+                           'theory': theory,
+                           'light_basis_set': light_basis_set,
+                           'heavy_basis_set': heavy_basis_set,
+                           'generic_basis_set': generic_basis_set,
+                           'max_light_atomic_number': max_light_atomic_number,
+                           'wall_time': wall_time}
 
-
-    def test_write(self):
-        df = pd.DataFrame([[1,2,3],[4,5,6]])
-        p1 = os.path.join(self.workdir, 'test.csv')
-        p2 = os.path.join(self.cachedir, 'test.csv')
-        df.to_csv(path_or_buf=p1)
-        df.to_csv(path_or_buf=p2)
+        with open(str(mol_workdir + '/gaussian_config.json'), 'w') as f:
+            json.dump(gaussian_config, f)
 
     def _cache(self) -> None:
 

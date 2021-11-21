@@ -56,7 +56,7 @@ def generate_h2_job(job_generator, mol_name, conf_name):
 
 def write_submission_script(job_generator, mol_name, conf_name):
     """
-    write into a submission script for each conformer
+    write a submit command into a submission script for each conformer
     example: qsub water_conf_1.sh
 
     :param job_generator
