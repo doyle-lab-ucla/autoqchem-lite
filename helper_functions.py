@@ -128,3 +128,12 @@ def add_numbers_to_repeated_items(items_list) -> list:
         else:
             updated_items_list.append(item)
     return updated_items_list
+
+
+def str_chop(s, suffix):
+    """
+    remove suffix from string s
+    """
+    if suffix and s.endswith(suffix):
+        return s[:-len(suffix)]
+    return s

@@ -46,9 +46,9 @@ class JobGenerator(object):
 
         if workflow_type == "equilibrium":
             self.tasks = (
-                f"opt=CalcFc {theory}/{basis_set} scf=xqc",
+                f"opt=CalcFc {theory}/{basis_set} scf=xqc", #TODO solvent
                 f"freq {theory}/{basis_set} volume NMR pop=NPA density=current Geom=AllCheck Guess=Read",
-                f"TD(NStates=10, Root=1) {theory}/{basis_set} volume pop=NPA density=current Geom=AllCheck Guess=Read"
+                f'TD(NStates=10, Root=1) {theory}/{basis_set} volume pop=NPA density=current Geom=AllCheck Guess=Read'
             )
         elif workflow_type == "transition_state":
             self.tasks = (
@@ -104,6 +104,7 @@ class JobGenerator(object):
                                         self.molecule.charge,
                                         self.molecule.spin)
 
+            # write h2 submission scripts
             cluster_functions.generate_h2_job(self, mol_name=mol_name, conf_name=conf_name)
             cluster_functions.write_submission_script(self, mol_name, conf_name)
 
